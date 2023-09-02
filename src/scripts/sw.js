@@ -1,35 +1,37 @@
-import 'regenerator-runtime';
-import CacheHelper from './utils/cache-helper';
+import { precacheAndRoute } from 'workbox-precaching';
 
-const assetsToCache = [
-  './',
-  './icons/maskable_icon.png',
-  './icons/maskable_icon_x48.png',
-  './icons/maskable_icon_x72.png',
-  './icons/maskable_icon_x96.png',
-  './icons/maskable_icon_x128.png',
-  './icons/maskable_icon_x192.png',
-  './icons/maskable_icon_x384.png',
-  './icons/maskable_icon_x512.png',
-  './index.html',
-  './favicon.png',
-  './app.bundle.js',
-  './app.webmanifest',
-  './sw.bundle.js',
-];
+// Do precaching
+precacheAndRoute(self.__WB_MANIFEST);
 
-self.addEventListener('install', (event) => {
-  console.log('Installing Service Worker ...');
-  event.waitUntil(CacheHelper.cachingAppShell([...assetsToCache]));
-  // TODO: Caching App Shell Resource
+self.addEventListener('install', () => {
+  console.log('Service Worker: Installed');
+  self.skipWaiting();
 });
 
-self.addEventListener('activate', (event) => {
-  console.log('Activating Service Worker ...');
-  event.waitUntil(CacheHelper.deleteOldCache());
-  // TODO: Delete old caches
+self.addEventListener('push', (event) => {
+  console.log('Service Worker: Pushed');
+
+  const dataJson = event.data.json();
+  const notification = {
+    title: dataJson.title,
+    options: {
+      body: dataJson.options.body,
+      icon: dataJson.options.icon,
+      image: dataJson.options.image,
+    },
+  };
+
+  event.waitUntil(self.registration.showNotification(notification.title, notification.options));
 });
 
-self.addEventListener('fetch', (event) => {
-  event.respondWith(CacheHelper.revalidateCache(event.request));
+self.addEventListener('notificationclick', (event) => {
+  const clickedNotification = event.notification;
+  clickedNotification.close();
+
+  const chainPromise = async () => {
+    console.log('Notification has been clicked');
+    await self.clients.openWindow('https://www.dicoding.com/');
+  };
+
+  event.waitUntil(chainPromise());
 });
